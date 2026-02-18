@@ -1,16 +1,18 @@
 import os
 import requests
 import biotite.structure as struct
+from biotite.structure import AtomArray
 import biotite.structure.io.pdbx as pdbx
 from .config import Config
 
-def get_protein_data(pdb_id, cfg:Config) -> tuple[struct.AtomArray, list[dict]]:
+def get_protein_data(pdb_id, cfg:Config) -> tuple[AtomArray, list[AtomArray]]:
     path = get_cif(pdb_id, cfg)
     cif_file = pdbx.CIFFile().read(path)
     metadata = get_ligand_metadata(pdb_id)
     prot_array = pdbx.get_structure(cif_file, model=1)
+    ligands = find_ligand_coords(prot_array, metadata)
 
-    return(prot_array, metadata)
+    return(prot_array, ligands)
 
 def get_cif(pdb_id: str, cfg: Config) -> str:
     pdb_id = pdb_id.upper()
@@ -32,19 +34,30 @@ def get_cif(pdb_id: str, cfg: Config) -> str:
 
     return file_path
 
+def find_ligand_coords(protein_arr: AtomArray, metadata: list[dict]):
+    all_ligands = []
+    for ligand in metadata:
+        ligand_atoms = []
+        ligand_mask = (
+            (protein_arr.chain_id == ligand['auth_asym_id']) &
+            (protein_arr.res_id == int(ligand['auth_seq_id'])) &
+            (protein_arr.res_name == ligand['comp_id'])
+        )
+        ligand_atoms.append(protein_arr[ligand_mask])
+        all_ligands.append(ligand_atoms)
+        
+    return all_ligands
 
 def get_ligand_metadata(pdb_id: str) -> list[dict]:
     query = """
 {
       entry(entry_id: "%s") {
         nonpolymer_entities {
-          rcsb_nonpolymer_entity_container_identifiers {
-            asym_ids
-          }
           nonpolymer_entity_instances {
             rcsb_nonpolymer_entity_instance_container_identifiers {
               auth_seq_id
               comp_id
+              auth_asym_id
             }
           }
         }
@@ -57,17 +70,16 @@ def get_ligand_metadata(pdb_id: str) -> list[dict]:
     except requests.RequestException as e:
         raise RuntimeError(f"Failed to fetch {pdb_id} ligand metadata: {e}")
 
-    resp = resp['data']['entry']['nonpolymer_entities']
+    data = resp['data']['entry']['nonpolymer_entities']
     ligand_list = []
-    for l in resp:
-        asym_ids = l["rcsb_nonpolymer_entity_container_identifiers"]["asym_ids"]
-        rest = l["nonpolymer_entity_instances"]
-        for i in range(0,len(asym_ids)):
-            rest_containers = rest[i]["rcsb_nonpolymer_entity_instance_container_identifiers"]
+    for entity in data:
+        instances = entity["nonpolymer_entity_instances"]
+        for i in range(0,len(instances)):
+            ids = instances[i]["rcsb_nonpolymer_entity_instance_container_identifiers"]
             ligand_list.append({
-                "asym_id": asym_ids[i],
-                "auth_seq_id": rest_containers["auth_seq_id"],
-                "comp_id": rest_containers["comp_id"]
+                "auth_asym_id": ids["auth_asym_id"],
+                "auth_seq_id": ids["auth_seq_id"],
+                "comp_id": ids["comp_id"]
             })
 
     return ligand_list
