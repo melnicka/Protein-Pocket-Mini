@@ -3,15 +3,16 @@ import requests
 from biotite.structure import AtomArray
 import biotite.structure.io.pdbx as pdbx
 from .config import Config
+from typing import Any
 
-def get_protein_data(pdb_id, cfg:Config) -> tuple[AtomArray, list[AtomArray]]:
+def get_protein_data(pdb_id, cfg:Config) -> tuple[Any]:
     path = get_cif(pdb_id, cfg)
     cif_file = pdbx.CIFFile().read(path)
     metadata = get_ligand_metadata(pdb_id)
     protein_arr = pdbx.get_structure(cif_file, model=1)
-    ligands = find_ligands(protein_arr, metadata)
+    ligands = find_ligands(protein_arr, metadata) 
 
-    return(protein_arr, ligands)
+    return(protein_arr, ligands, metadata)
 
 def get_cif(pdb_id: str, cfg: Config) -> str:
     pdb_id = pdb_id.upper()
@@ -33,7 +34,7 @@ def get_cif(pdb_id: str, cfg: Config) -> str:
 
     return file_path
 
-def find_ligands(protein_arr: AtomArray, metadata: list[dict]):
+def find_ligands(protein_arr: AtomArray, metadata: list[dict]) -> list[AtomArray]:
     all_ligands = []
     for ligand in metadata:
         ligand_mask = (
@@ -57,6 +58,13 @@ def get_ligand_metadata(pdb_id: str) -> list[dict]:
               auth_asym_id
             }
           }
+          nonpolymer_comp {
+            chem_comp {
+              formula_weight
+              name
+              formula
+            }
+          }
         }
       }
     }
@@ -69,15 +77,25 @@ def get_ligand_metadata(pdb_id: str) -> list[dict]:
 
     data = resp['data']['entry']['nonpolymer_entities']
     ligand_list = []
+
     for entity in data:
+        comps = entity['nonpolymer_comp']['chem_comp']
+        comp_dict = {
+            'name': comps['name'],
+            'formula': comps['formula'],
+            'formula_weight': comps['formula_weight']
+        }
+
         instances = entity["nonpolymer_entity_instances"]
         for i in range(0,len(instances)):
             ids = instances[i]["rcsb_nonpolymer_entity_instance_container_identifiers"]
-            ligand_list.append({
+            ligand_dict = {
                 "auth_asym_id": ids["auth_asym_id"],
                 "auth_seq_id": ids["auth_seq_id"],
                 "comp_id": ids["comp_id"]
-            })
+            }
+            ligand_dict.update(comp_dict)
+            ligand_list.append(ligand_dict)
 
     return ligand_list
         
