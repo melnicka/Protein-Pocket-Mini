@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-@dataclass(kw_only=True)
+@dataclass()
 class Config:
     data_dir: str = "data"
-
+    radius: float = 5.0
+ 

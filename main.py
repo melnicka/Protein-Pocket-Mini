@@ -1,14 +1,15 @@
 from src.config import Config
 import biotite.structure as struct
 from src.data_fetching import get_protein_data 
+from src.pocket import find_pockets
 
 cfg = Config()
 
-id="9KQH"
+id="9kqh"
 
-at_arr, ligands = get_protein_data(id, cfg)
+protein_arr, ligands = get_protein_data(id, cfg)
 
-print(at_arr.shape)
-print(len(ligands))
+pocket0, pocket1 = find_pockets(protein_arr, ligands, cfg)
 
-
+print(pocket0[0].shape)
+print(pocket1[0].shape)

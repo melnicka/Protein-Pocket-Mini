@@ -1,6 +1,5 @@
 import os
 import requests
-import biotite.structure as struct
 from biotite.structure import AtomArray
 import biotite.structure.io.pdbx as pdbx
 from .config import Config
@@ -9,10 +8,10 @@ def get_protein_data(pdb_id, cfg:Config) -> tuple[AtomArray, list[AtomArray]]:
     path = get_cif(pdb_id, cfg)
     cif_file = pdbx.CIFFile().read(path)
     metadata = get_ligand_metadata(pdb_id)
-    prot_array = pdbx.get_structure(cif_file, model=1)
-    ligands = find_ligand_coords(prot_array, metadata)
+    protein_arr = pdbx.get_structure(cif_file, model=1)
+    ligands = find_ligands(protein_arr, metadata)
 
-    return(prot_array, ligands)
+    return(protein_arr, ligands)
 
 def get_cif(pdb_id: str, cfg: Config) -> str:
     pdb_id = pdb_id.upper()
@@ -34,17 +33,15 @@ def get_cif(pdb_id: str, cfg: Config) -> str:
 
     return file_path
 
-def find_ligand_coords(protein_arr: AtomArray, metadata: list[dict]):
+def find_ligands(protein_arr: AtomArray, metadata: list[dict]):
     all_ligands = []
     for ligand in metadata:
-        ligand_atoms = []
         ligand_mask = (
             (protein_arr.chain_id == ligand['auth_asym_id']) &
             (protein_arr.res_id == int(ligand['auth_seq_id'])) &
             (protein_arr.res_name == ligand['comp_id'])
         )
-        ligand_atoms.append(protein_arr[ligand_mask])
-        all_ligands.append(ligand_atoms)
+        all_ligands.append(protein_arr[ligand_mask])
         
     return all_ligands
 
