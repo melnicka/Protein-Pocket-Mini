@@ -27,7 +27,7 @@ def find_pockets( protein_arr: AtomArray,
     for ligand_arr in ligand_list:
         coords = ligand_arr.coord
         raw_indicies = cell_list.get_atoms(coords, radius=cfg.radius)
-        indicies = raw_indicies[raw_indicies != -1]
+        indicies = np.unique(raw_indicies[raw_indicies != -1])
 
         raw_pocket = protein_arr[indicies]
         pocket_mask = (
@@ -91,12 +91,15 @@ def get_res_info(protein_arr: AtomArray):
     aromatic = ["PHE", "TYR", "TRP", "HIS"]
     nonpolar_count, polar_count, aromatic_count = 0, 0, 0
 
-    for atom in protein_arr:
-        if atom.res_name in aromatic:
+    _, unique_indices = np.unique(protein_arr.res_id, return_index=True)
+    unique_residues = protein_arr[unique_indices]
+
+    for res in unique_residues:
+        if res.res_name in aromatic:
             aromatic_count += 1
-        if atom.res_name in nonpolar:
+        if res.res_name in nonpolar:
             nonpolar_count += 1
-        elif atom.res_name in polar:
+        elif res.res_name in polar:
             polar_count += 1
 
     res_info['aromatic_count'] = aromatic_count
