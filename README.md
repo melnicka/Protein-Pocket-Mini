@@ -7,19 +7,27 @@ Protein Pocket Mini is a small cli prototype of an application that automates th
 Given one or more PDB IDs, the application executes the following pipeline:
 1. **Data Retrieval:** Downloads the 3D structure (CIF format) and exact ligand metadata directly from the RCSB PDB using its GraphQL API.
 2. **Pocket Identification:** Locates all ligands in the structure. It defines the "binding pocket" as all polymer atoms located within a 5.0 Å radius of the ligand.
-3. **Descriptor Calculation:** Computes some geometric and chemical properties for each identified pocket:
+3. **Edge Cases:**  Handle edge cases when a small molecule is unbound to the protein or when no ligands have been found.
+4. **Descriptor Calculation:** Computes some geometric and chemical properties for each identified pocket:
    * **Total atom count**
    * **Hydrophobicity:** The percentage of atoms belonging to nonpolar residues.
    * **Aromaticity:** The number of atoms belonging to aromatic rings.
    * **SASA:** The total Solvent Accessible Surface Area.
    * **Gyration radius:** A measure of the pocket's spatial compactness.
-4. **Reporting:** Outputs the structured analysis to the terminal, with options to export to JSON or a text file.
+5. **Reporting:** Outputs the structured analysis to the terminal, with options to export to JSON or a text file.
 
-## Prerequisites
+## Installation
 
-The application requires Python and the following libraries:
+Clone the repository and install the requirements.
+
+To clone the repository run:
 ```bash
-pip install biotite numpy requests
+git clone https://github.com/melnicka/Protein-Pocket-Mini.git
+```
+
+To install the requirements run:
+```bash
+pip install -r requirements.txt
 ```
 
 ## How to Use
@@ -28,12 +36,12 @@ Run the `main.py` script from your terminal and provide one or more PDB IDs as p
 
 ### Basic Command
 ```bash
-python main.py <PDB_ID_1> <PDB_ID_2>
+python3 main.py <PDB_ID>
 ```
 
 **Example:**
 ```bash
-python main.py 9T1Q 9kqh
+python3 main.py 9T1Q 9kqh
 ```
 
 ### Optional Arguments
@@ -49,11 +57,11 @@ You can control how the application outputs data using the following flags:
 **1. Process multiple proteins and save a copy of the output:**
 Analyzes two structures, prints the results to the terminal, and appends the text to `results.txt`.
 ```bash
-python main.py 9T1Q 9kqh -t results.txt
+python3 main.py 9T1Q 9kqh -t results.txt
 ```
 
 **2. Save machine-readable data silently:**
 Analyzes a protein, saves the calculated descriptors to `data.json`, and keeps the console clean.
 ```bash
-python main.py 9T1Q -jq data.json 
+python3 main.py 9T1Q -jq data.json 
 ```

@@ -83,6 +83,9 @@ def find_ligands(protein_arr: AtomArray, metadata: list[dict]) -> list[AtomArray
         List of AtomArrays for each ligand.
     """
     all_ligands = []
+    if len(metadata) == 0:
+        return all_ligands
+
     for ligand in metadata:
         ligand_mask = (
             (protein_arr.chain_id == ligand['auth_asym_id']) &
@@ -107,6 +110,9 @@ def parse_ligand_json(path: str) -> list[dict]:
         
         data = metadata['data']['entry']['nonpolymer_entities']
         ligand_list = []
+
+        if data is None:
+            return ligand_list
 
         for entity in data:
             comps = entity['nonpolymer_comp']['chem_comp']
