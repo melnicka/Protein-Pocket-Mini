@@ -3,6 +3,7 @@ from biotite.structure import AtomArray, CellList
 import numpy as np
 from .config import Config
 
+
 def find_pockets(
     protein_arr: AtomArray,
     ligand_list: list[AtomArray],
@@ -23,6 +24,8 @@ def find_pockets(
         )
         pocket = raw_pocket[pocket_mask]
         pocket.bonds = struct.connect_via_residue_names(pocket)
+        if len(pocket) == 0: 
+            pocket = None 
         pockets.append(pocket)
 
     return pockets

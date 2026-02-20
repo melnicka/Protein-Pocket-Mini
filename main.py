@@ -2,10 +2,20 @@ import argparse
 from src.config import Config
 from src.utils import display_full_info
 
-cfg = Config()
+if __name__ == "__main__":
 
-parser = argparse.ArgumentParser()
-parser.add_argument("pdb_id", help="PDB protein id.")
-arg = parser.parse_args()
+    cfg = Config()
 
-display_full_info(arg.pdb_id, cfg)
+    parser = argparse.ArgumentParser(
+        description= "Find all ligand binding pockets and calculate its descriptors."
+    )
+    parser.add_argument(
+        "pdb_ids",
+        nargs="+",
+        type=str,
+        help="List of PDB IDs to process (e.g., 9T1Q 9kqh 9ssd)"
+    )
+    args = parser.parse_args()
+
+    for pdb_id in args.pdb_ids:
+        display_full_info(pdb_id, cfg)

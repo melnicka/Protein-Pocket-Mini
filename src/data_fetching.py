@@ -1,27 +1,36 @@
 import os
+import json
 import requests
-from biotite.structure import AtomArray
 import biotite.structure.io.pdbx as pdbx
-from .config import Config
-from typing import Any
+from typing import TYPE_CHECKING
 
-def get_protein_data(pdb_id, cfg:Config) -> tuple[Any]:
-    path = get_cif(pdb_id, cfg)
-    cif_file = pdbx.CIFFile().read(path)
-    metadata = get_ligand_metadata(pdb_id)
+if TYPE_CHECKING:
+    from .config import Config
+    from typing import Any
+    from biotite.structure import AtomArray
+
+
+def get_protein_data(pdb_id: str, cfg:Config) -> tuple[Any]:
+    pdb_id = pdb_id.upper()
+    protein_path = get_cif(pdb_id, cfg)
+    cif_file = pdbx.CIFFile().read(protein_path)
+
+    ligand_path = get_ligand_json(pdb_id, cfg)
+    ligand_dicts = parse_ligand_json(ligand_path)
+
     protein_arr = pdbx.get_structure(cif_file, model=1)
-    ligands = find_ligands(protein_arr, metadata) 
+    ligands = find_ligands(protein_arr, ligand_dicts) 
 
-    return(protein_arr, ligands, metadata)
+    return(protein_arr, ligands, ligand_dicts)
 
 def get_cif(pdb_id: str, cfg: Config) -> str:
-    pdb_id = pdb_id.upper()
-    file_path = f"{cfg.data_dir}/{pdb_id}.cif"
+    dir_path = f"{cfg.data_dir}/{pdb_id}"
+    file_path = f"{dir_path}/{pdb_id}.cif"
+
     if os.path.exists(file_path):
         return file_path
 
-    if not os.path.exists(cfg.data_dir):
-        os.makedirs(cfg.data_dir)
+    os.makedirs(dir_path, exist_ok=True)
 
     try: 
         resp = requests.get(f"https://files.rcsb.org/download/{pdb_id}.cif")
@@ -46,7 +55,42 @@ def find_ligands(protein_arr: AtomArray, metadata: list[dict]) -> list[AtomArray
         
     return all_ligands
 
-def get_ligand_metadata(pdb_id: str) -> list[dict]:
+def parse_ligand_json(path: str) -> list[dict]:
+    with open(path, 'r') as f:
+        metadata = json.load(f)
+        
+        data = metadata['data']['entry']['nonpolymer_entities']
+        ligand_list = []
+
+        for entity in data:
+            comps = entity['nonpolymer_comp']['chem_comp']
+            comp_dict = {
+                'name': comps['name'],
+                'formula': comps['formula'],
+                'formula_weight': comps['formula_weight']
+            }
+
+            instances = entity["nonpolymer_entity_instances"]
+            for i in range(0,len(instances)):
+                ids = instances[i]["rcsb_nonpolymer_entity_instance_container_identifiers"]
+                ligand_dict = {
+                    "auth_asym_id": ids["auth_asym_id"],
+                    "auth_seq_id": ids["auth_seq_id"],
+                    "comp_id": ids["comp_id"]
+                }
+                ligand_dict.update(comp_dict)
+                ligand_list.append(ligand_dict)
+
+    return ligand_list
+
+def get_ligand_json(pdb_id: str, cfg: Config) -> str:
+
+    dir_path = f"{cfg.data_dir}/{pdb_id}"
+    file_path = f"{dir_path}/{pdb_id}_ligands.json"
+
+    if os.path.exists(file_path):
+        return file_path
+
     query = """
 {
       entry(entry_id: "%s") {
@@ -75,27 +119,8 @@ def get_ligand_metadata(pdb_id: str) -> list[dict]:
     except requests.RequestException as e:
         raise RuntimeError(f"Failed to fetch {pdb_id} ligand metadata: {e}")
 
-    data = resp['data']['entry']['nonpolymer_entities']
-    ligand_list = []
+    with open(file_path, 'w') as f:
+        json.dump(resp, f)
 
-    for entity in data:
-        comps = entity['nonpolymer_comp']['chem_comp']
-        comp_dict = {
-            'name': comps['name'],
-            'formula': comps['formula'],
-            'formula_weight': comps['formula_weight']
-        }
-
-        instances = entity["nonpolymer_entity_instances"]
-        for i in range(0,len(instances)):
-            ids = instances[i]["rcsb_nonpolymer_entity_instance_container_identifiers"]
-            ligand_dict = {
-                "auth_asym_id": ids["auth_asym_id"],
-                "auth_seq_id": ids["auth_seq_id"],
-                "comp_id": ids["comp_id"]
-            }
-            ligand_dict.update(comp_dict)
-            ligand_list.append(ligand_dict)
-
-    return ligand_list
+    return file_path
         
