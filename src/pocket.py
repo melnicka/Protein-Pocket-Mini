@@ -4,11 +4,24 @@ import numpy as np
 from .config import Config
 
 
-def find_pockets(
-    protein_arr: AtomArray,
+def find_pockets( protein_arr: AtomArray,
     ligand_list: list[AtomArray],
     cfg: Config
 ) -> list[AtomArray]:
+    """Finds all of the protein's ligand binding pockets, based on the proximity to the ligand.
+
+        Filters out solvent and stray ions, retaining polymers only.
+
+        Args:
+            protein_arr: AtomArray of the target protein.
+            ligand_list: A list of AtomArrays, each representing a distinct ligand.
+            cfg: Configuration object with an attribute:
+                - radius (float): search radius in Angstroms [Å] used to identify binding pocket.
+
+        Returns:
+            A list of AtomArrays representing the filtered binding pockets. 
+            If a search yields zero valid polymer atoms, that list index will contain None.
+        """
     cell_list = CellList(protein_arr, cell_size=cfg.radius)
     pockets = []
     for ligand_arr in ligand_list:
@@ -31,6 +44,18 @@ def find_pockets(
     return pockets
 
 def calculate_descriptors(pocket: AtomArray) -> dict:
+    """Calculates descriptors of a binding pocket.
+
+        Args:
+            pocket: AtomArray of the pocket.
+
+        Returns:
+            A dictionary containing descriptors:
+            - atom_count (int): Total number of atoms in the array.
+            - gyration_radius (float): Spatial compactness of the pocket.
+            - sasa (float): Total solvent accessible surface area.
+            - Additional chemical composition metrics merged from get_res_info().
+        """
     descriptors = {}
     descriptors['atom_count'] = len(pocket)
     descriptors['gyration_radius'] = float(struct.gyration_radius(pocket))
@@ -43,6 +68,17 @@ def calculate_descriptors(pocket: AtomArray) -> dict:
     return descriptors
 
 def get_res_info(protein_arr: AtomArray):
+    """Calculates chemical composition of the pocket by categorizing its atoms.
+
+        Args:
+            protein_arr: AtomArray of the pocket.
+
+        Returns:
+            A dictionary containing:
+            - aromatic_count (int): Total number of individual atoms that belong 
+              to aromatic residues (PHE, TYR, TRP, HIS).
+            - hydrophobic_perc (float): Percentage of atoms belonging to nonpolar residues.
+        """
     res_info = {}
     nonpolar = [
         "GLY", "ALA", "VAL", "LEU", "ILE",

@@ -6,11 +6,25 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .config import Config
-    from typing import Any
     from biotite.structure import AtomArray
 
 
-def get_protein_data(pdb_id: str, cfg:Config) -> tuple[Any]:
+def get_protein_data(pdb_id: str, cfg:Config) -> tuple:
+    """Acts as the main pipeline to fetch, parse, and extract protein and ligand data.
+
+        Converts raw data into AtomArrays and dictionaries.
+
+        Args:
+            pdb_id: Unique PDB identifier.
+            cfg: Config object with an attribute:
+                - data_dir (str): Path to the data directory
+
+        Returns:
+            A 3-element tuple containing:
+                - protein_arr (AtomArray): 3D structure of the target protein.
+                - ligands (list[AtomArray]): List of extracted structures for each ligand.
+                - ligand_dicts (list[dict]): List of metadata dictionaries for each ligand.
+        """
     pdb_id = pdb_id.upper()
     protein_path = get_cif(pdb_id, cfg)
     cif_file = pdbx.CIFFile().read(protein_path)
@@ -24,6 +38,21 @@ def get_protein_data(pdb_id: str, cfg:Config) -> tuple[Any]:
     return(protein_arr, ligands, ligand_dicts)
 
 def get_cif(pdb_id: str, cfg: Config) -> str:
+    """Downloads protein's 3D structure file in CIF format from RCSB PDB.
+    Creates a unique directory for protein's data.
+    If the file already exists, just returns the file path.
+
+    Args:
+        pdb_id: Unique PDB identifier.
+        cfg: Config object with an attribute:
+            - data_dir (str): Path to the data directory
+
+    Returns:
+        Path to the CIF file.
+
+    Raises:
+        RuntimeError: If failed to get the response from the server.
+    """
     dir_path = f"{cfg.data_dir}/{pdb_id}"
     file_path = f"{dir_path}/{pdb_id}.cif"
 
@@ -44,6 +73,15 @@ def get_cif(pdb_id: str, cfg: Config) -> str:
     return file_path
 
 def find_ligands(protein_arr: AtomArray, metadata: list[dict]) -> list[AtomArray]:
+    """Finds AtomArray for each ligand present in the protein.
+
+    Args:
+        protein_arr: AtomArray of the target protein.
+        metadata: List of dictionaries generated with parse_ligand_json().
+
+    Returns:
+        List of AtomArrays for each ligand.
+    """
     all_ligands = []
     for ligand in metadata:
         ligand_mask = (
@@ -56,6 +94,14 @@ def find_ligands(protein_arr: AtomArray, metadata: list[dict]) -> list[AtomArray
     return all_ligands
 
 def parse_ligand_json(path: str) -> list[dict]:
+    """Parses a json file generated with get_ligand_json() function.
+
+    Args:
+        path: Path to the JSON file with ligand metadata.
+
+    Returns:
+        List of dictionaries with data for each ligand. 
+    """
     with open(path, 'r') as f:
         metadata = json.load(f)
         
@@ -84,7 +130,22 @@ def parse_ligand_json(path: str) -> list[dict]:
     return ligand_list
 
 def get_ligand_json(pdb_id: str, cfg: Config) -> str:
+    """Downloads ligand metadata through RCSB PDB GraphQL API and saves it in a JSON format.
 
+    If the file already exists, just returns the file path.
+    Note: This function must be ran after get_cif(). 
+
+    Args:
+        pdb_id: Unique PDB identifier.
+        cfg: Config object with an attribute:
+            - data_dir (str): Path to the data directory
+
+    Returns:
+        Path to the saved JSON file.
+
+    Raises:
+        RuntimeError: If failed to post the query and get the response from the server.
+    """
     dir_path = f"{cfg.data_dir}/{pdb_id}"
     file_path = f"{dir_path}/{pdb_id}_ligands.json"
 
