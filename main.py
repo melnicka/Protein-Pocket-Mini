@@ -1,21 +1,30 @@
-import argparse
+import json
 from src.config import Config
-from src.utils import display_full_info
+from src.utils import display_full_info, get_full_info, parse_args
+from contextlib import redirect_stdout
 
 if __name__ == "__main__":
 
     cfg = Config()
 
-    parser = argparse.ArgumentParser(
-        description= "Find all ligand binding pockets and calculate its descriptors."
-    )
-    parser.add_argument(
-        "pdb_ids",
-        nargs="+",
-        type=str,
-        help="List of PDB IDs to process (e.g., 9T1Q 9kqh 9ssd)"
-    )
-    args = parser.parse_args()
+    args = parse_args()
+    
+    all_json_data = []
 
     for pdb_id in args.pdb_ids:
-        display_full_info(pdb_id, cfg)
+        full_info = get_full_info(pdb_id, cfg)
+        all_json_data.append(full_info)
+
+        if args.save_text:
+            with open(args.save_text, 'a') as f:
+                with redirect_stdout(f):
+                    display_full_info(full_info)
+        
+        if args.save_json:
+            with open(args.save_json, 'w') as f:
+                json.dump(all_json_data, f, indent=2)
+
+        if not args.quiet:
+            display_full_info(full_info)
+                        
+
