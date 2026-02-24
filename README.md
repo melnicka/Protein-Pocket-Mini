@@ -63,5 +63,5 @@ python3 main.py 9T1Q 9kqh -t results.txt
 **2. Save machine-readable data silently:**
 Analyzes a protein, saves the calculated descriptors to `data.json`, and keeps the console clean.
 ```bash
-python3 main.py 9T1Q -jq data.json 
+python3 main.py 9T1Q -qj data.json 
 ```
