@@ -10,8 +10,8 @@ Given one or more PDB IDs, the application executes the following pipeline:
 3. **Edge Cases:**  Handle edge cases when a small molecule is unbound to the protein or when no ligands have been found.
 4. **Descriptor Calculation:** Computes some geometric and chemical properties for each identified pocket:
    * **Total atom count**
-   * **Hydrophobicity:** The percentage of atoms belonging to nonpolar residues.
-   * **Aromaticity:** The number of atoms belonging to aromatic rings.
+   * **Hydrophobicity:** Percentage of residues belonging to nonpolar categories. 
+   * **Aromaticity:** Total number of aromatic residues (PHE, TYR, TRP, HIS). 
    * **SASA:** The total Solvent Accessible Surface Area.
    * **Gyration radius:** A measure of the pocket's spatial compactness.
 5. **Reporting:** Outputs the structured analysis to the terminal, with options to export to JSON or a text file.

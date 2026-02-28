@@ -54,7 +54,8 @@ def calculate_descriptors(pocket: AtomArray) -> dict:
             - atom_count (int): Total number of atoms in the array.
             - gyration_radius (float): Spatial compactness of the pocket.
             - sasa (float): Total solvent accessible surface area.
-            - Additional chemical composition metrics merged from get_res_info().
+            - aromatic_count (int): Total number of aromatic residues (PHE, TYR, TRP, HIS).
+            - hydrophobic_perc (float): Percentage of residues belonging to nonpolar categories.
         """
     descriptors = {}
     descriptors['atom_count'] = len(pocket)
@@ -68,17 +69,18 @@ def calculate_descriptors(pocket: AtomArray) -> dict:
     return descriptors
 
 def get_res_info(protein_arr: AtomArray):
-    """Calculates chemical composition of the pocket by categorizing its atoms.
+    """Helper function for calculate_descriptors() function.
 
-        Args:
-            protein_arr: AtomArray of the pocket.
+        Calculates chemical composition of the pocket by categorizing its residues.
 
-        Returns:
-            A dictionary containing:
-            - aromatic_count (int): Total number of individual atoms that belong 
-              to aromatic residues (PHE, TYR, TRP, HIS).
-            - hydrophobic_perc (float): Percentage of atoms belonging to nonpolar residues.
-        """
+            Args:
+                protein_arr: AtomArray of the pocket.
+
+            Returns:
+                A dictionary containing:
+                - aromatic_count (int): Total number of aromatic residues (PHE, TYR, TRP, HIS).
+                - hydrophobic_perc (float): Percentage of residues belonging to nonpolar categories.
+    """   
     res_info = {}
     nonpolar = [
         "GLY", "ALA", "VAL", "LEU", "ILE",
@@ -91,7 +93,8 @@ def get_res_info(protein_arr: AtomArray):
     aromatic = ["PHE", "TYR", "TRP", "HIS"]
     nonpolar_count, polar_count, aromatic_count = 0, 0, 0
 
-    _, unique_indices = np.unique(protein_arr.res_id, return_index=True)
+    unique_signatures = np.array([f"{c}_{r}" for c, r in zip(protein_arr.chain_id, protein_arr.res_id)])
+    _, unique_indices = np.unique(unique_signatures, return_index=True)
     unique_residues = protein_arr[unique_indices]
 
     for res in unique_residues:
@@ -106,3 +109,4 @@ def get_res_info(protein_arr: AtomArray):
     res_info['hydrophobic_perc'] = 100 * nonpolar_count / (polar_count+nonpolar_count)
 
     return res_info
+
